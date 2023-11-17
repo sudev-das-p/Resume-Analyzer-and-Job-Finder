@@ -74,34 +74,40 @@ if resume is not None and st.button("Resume Analysis"):
     base_url = 'https://www.linkedin.com/jobs/search?keywords={}&location=United%20States&geoId=103644278&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0'
     driver.get(base_url)
 
+    all_company = []
+    all_position = []
+    all_link = []
+
     for job in jobs_list:
         url = base_url.format(job)
         driver.get(url)
         companies = []
         positions = []
         linklist = []
-        jobList = []
 
         for i in range(20):
-            company = driver.find_elements(By.CLASS_NAME, 'base-search-card__subtitle')[i].text
-            companies.append(company)
-        positions = []
-        for i in range(20):
-            position = driver.find_elements(By.CLASS_NAME, 'base-search-card__title')[i].text
-            positions.append(position)
+            try:
+                company = driver.find_elements(By.CLASS_NAME, 'base-search-card__subtitle')[i].text
+                position = driver.find_elements(By.CLASS_NAME, 'base-search-card__title')[i].text
+                job_elem = driver.find_elements(By.CLASS_NAME, 'base-card__full-link')[i]
+                link = job_elem.get_attribute('href')
 
-        for i in range(20):
-            job = driver.find_elements(By.CLASS_NAME, 'base-card__full-link')[i]
-            jobList.append(job)
-        for j in jobList:
-            linklist.append(j.get_attribute('href'))
-        job_data = {'Company': companies, 'Position': positions, 'LinkedIn Link': linklist}
-        jobs_df = pd.DataFrame(job_data)
+                companies.append(company)
+                positions.append(position)
+                linklist.append(link)
+            except IndexError:
+                break
 
-        # Format the 'LinkedIn Link' column to display clickable links
-        jobs_df['LinkedIn Link'] = jobs_df['LinkedIn Link'].apply(
-            lambda link: f'<a href="{link}" target="_blank">LinkedIn Link</a>')
+        all_company.extend(companies)
+        all_position.extend(positions)
+        all_link.extend(linklist)
 
-        st.write(jobs_df.to_html(escape=False, render_links=True), unsafe_allow_html=True)
+    driver.quit()
+    job_data = {'Company': all_company, 'Position': all_position, 'LinkedIn Link': all_link}
+    jobs_df = pd.DataFrame(job_data)
 
-        driver.quit()
+    # Format the 'LinkedIn Link' column to display clickable links
+    jobs_df['LinkedIn Link'] = jobs_df['LinkedIn Link'].apply(
+        lambda link: f'<a href="{link}" target="_blank">LinkedIn Link</a>')
+
+    st.write(jobs_df.to_html(escape=False, render_links=True), unsafe_allow_html=True)
