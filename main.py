@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from langchain.llms import OpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
+from selenium.webdriver.chrome.options import Options
 
 resume = st.file_uploader("Upload you resume in pdf format", type='pdf', accept_multiple_files=False,
                           label_visibility="visible")
@@ -40,7 +41,10 @@ def job_roles(content):
     return response['job']
 
 
-if resume is not None and st.button("Resume Analysis"):
+if resume is not None and st.button("Get Resume Analysis and Job Roles"):
+
+    progress_text = "Analysing your resume and finding jobs. Please wait."
+    my_bar = st.progress(0, text=progress_text)
 
     text = extract_text_from_pdf(resume)
     load_dotenv()
@@ -53,8 +57,10 @@ if resume is not None and st.button("Resume Analysis"):
         template = PromptTemplate(
             input_variables=['resume'],
             template='Analyze the provided {resume} for its content, focusing on key sections such as personal '
-                     'details (name, email, LinkedIn), experience, skills, and projects. Evaluate the use of action '
-                     'verbs and quantification in the resume to identify strengths, weaknesses, and improvement '
+                     'details (name, email, LinkedIn), experience, skills, and projects. Take into consideration '
+                     'properties like use of action'
+                     'verbs, quantification of impact repetition of action verbs,brevity in the resume to identify '
+                     'strengths, weaknesses, and improvement'
                      'suggestions. Compare the resume with an ideal one and provide concise insights for enhancement.'
         )
         chain = LLMChain(llm=llm, prompt=template, output_key='analysis')
@@ -64,14 +70,16 @@ if resume is not None and st.button("Resume Analysis"):
 
     analysis = resume_analyser(text)
     st.write(analysis)
-    driver = webdriver.Chrome()
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    driver = webdriver.Chrome(options=chrome_options)
     driver.implicitly_wait(10)
 
     jobs = job_roles(text)
 
     # st.write(jobs)
     jobs_list = jobs.split(', ')
-    base_url = 'https://www.linkedin.com/jobs/search?keywords={}&location=United%20States&geoId=103644278&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0'
+    base_url = 'https://www.linkedin.com/jobs/search?keywords={}'
     driver.get(base_url)
 
     all_company = []
